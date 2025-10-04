@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Sub, Neg};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub(crate) struct Vec3 {
@@ -21,6 +21,27 @@ impl Vec3 {
             x: self.y * other.z - self.z * other.y,
             y: self.z * other.x - self.x * other.z,
             z: self.x * other.y - self.y * other.x
+        }
+    }
+
+    pub fn normalized(&self) -> Vec3 {
+        let len = self.length();
+        if len == 0.0 {
+            *self
+        } else {
+            *self / len
+        }
+    }
+
+    pub fn length(&self) -> f32 {
+        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+
+    pub fn reverse(&self) -> Vec3 {
+        Vec3 {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z
         }
     }
 }
@@ -110,5 +131,12 @@ impl Div<f32> for Vec3 {
             y: self.y / scalar,
             z: self.z / scalar
         }
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Vec3;
+    fn neg(self) -> Vec3 {
+        Vec3 { x: -self.x, y: -self.y, z: -self.z }
     }
 }
