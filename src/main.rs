@@ -2,6 +2,9 @@ mod vec3;
 mod sphere;
 mod camera;
 mod ray;
+mod phong;
+mod light;
+mod color;
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::application::ApplicationHandler;
@@ -11,6 +14,9 @@ use winit::window::{Window, WindowId, WindowAttributes};
 use sphere::Sphere;
 use vec3::Vec3;
 use crate::camera::Camera;
+use crate::color::Color;
+use crate::light::PointLight;
+use image; // for saving the buffer
 
 #[derive(Default)]
 struct App {
@@ -23,7 +29,7 @@ struct App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, el: &ActiveEventLoop) {
         // Desired resolution
-        let (w, h) = (1920u32, 1080u32);
+        let (w, h) = (500u32, 500u32);
 
         // Create + leak the window (simplify lifetime) sized to camera resolution
         let winit_window = el.create_window(
@@ -37,15 +43,26 @@ impl ApplicationHandler for App {
         self.pixels = Some(px);
 
         // Build scene and render once to a buffer
-        let sphere = Sphere::new(1.0, Vec3::new(0.0, 0.0, 5.0));
+        let sphere = Sphere::new(2.0, Vec3::new(0.0, 0.0, 5.0));
+        let light = PointLight::new(Vec3::new(5.0, 5.0, 0.0), Color::new(1.0, 1.0, 1.0, 0.1));
         let camera = Camera::new(
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(0.0, 0.0, 0.0),
-            60.0_f64,
+            60.0_f32,
             (w, h)
         );
-        self.image = Some(camera.render_sphere(&sphere));
+        self.image = Some(camera.render_sphere(&sphere, &light));
         self.dims = (w, h);
+        // Save the image to disk
+        if let Some(buf) = &self.image {
+            let _ = image::save_buffer(
+                "render.png",
+                buf,
+                w,
+                h,
+                image::ColorType::Rgba8
+            );
+        }
 
         winit_window.request_redraw();
     }
