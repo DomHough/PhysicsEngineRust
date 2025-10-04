@@ -11,12 +11,21 @@ impl Sphere {
         Sphere { radius, position }
     }
 
-    pub fn intersects(&self, ray: &Ray) -> bool {
+    pub fn intersects(&self, ray: &Ray) -> Option<(f32, Vec3, Vec3)> {
         let oc = ray.origin - self.position;
         let a = ray.direction.dot(&ray.direction);
         let b = 2.0 * oc.dot(&ray.direction);
         let c = oc.dot(&oc) - self.radius * self.radius;
         let discriminant = b * b - 4.0 * a * c;
-        discriminant > 0.0
+        if discriminant < 0.0 {
+            return None
+        }
+        let sqrtd = discriminant.sqrt();
+        let t1 = (-b - sqrtd) / (2.0 * a);
+        let t2 = (-b + sqrtd) / (2.0 * a);
+        let t = if t1 > 0.0 { t1 } else if t2 > 0.0 { t2 } else { return None };
+        let point = ray.origin + ray.direction * t;
+        let normal = (point - self.position).normalized();
+        Some((t, point, normal))
     }
 }
