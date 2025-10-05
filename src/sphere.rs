@@ -1,15 +1,20 @@
 use crate::ray::Ray;
 use crate::vec3::Vec3;
+use crate::material::Material; // new import
 
+#[derive(Debug)]
 pub(crate) struct Sphere {
     radius: f32,
-    position: Vec3
+    position: Vec3,
+    material: Material,
 }
 
 impl Sphere {
-    pub fn new(radius: f32, position: Vec3) -> Self {
-        Sphere { radius, position }
+    pub fn new(radius: f32, position: Vec3, material: Material) -> Self {
+        Sphere { radius, position, material }
     }
+
+    pub fn material(&self) -> &Material { &self.material }
 
     pub fn intersects(&self, ray: &Ray) -> Option<(f32, Vec3, Vec3)> {
         let oc = ray.origin - self.position;
@@ -17,9 +22,7 @@ impl Sphere {
         let b = 2.0 * oc.dot(&ray.direction);
         let c = oc.dot(&oc) - self.radius * self.radius;
         let discriminant = b * b - 4.0 * a * c;
-        if discriminant < 0.0 {
-            return None
-        }
+        if discriminant < 0.0 { return None }
         let sqrtd = discriminant.sqrt();
         let t1 = (-b - sqrtd) / (2.0 * a);
         let t2 = (-b + sqrtd) / (2.0 * a);

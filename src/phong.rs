@@ -1,38 +1,57 @@
 use crate::color::Color;
 use crate::vec3::Vec3;
+use crate::light::LightSource; // for multi-light shading
+use crate::material::Material; // moved Material to its own file
 
-pub fn phong_shade(
+// Tunable attenuation constants (smaller => brighter at distance)
+const ATTEN_LINEAR: f32 = 0.05;   // was effectively 0 with only quadratic term before
+const ATTEN_QUAD: f32 = 0.01;     // reduced from implicit 0.1 (much less aggressive)
+
+pub fn shade_multi_light(
     normal: Vec3,
-    light_dir: Vec3,
     view_dir: Vec3,
-    light_color: Color,
-    material_ambient: Color,
-    material_diffuse: Color,
-    material_specular: Color,
-    shininess: f32,
-    ambient_light: Color
+    point: Vec3,
+    lights: &[LightSource],
+    material: &Material,
+    ambient_light: Color,
 ) -> Color {
-    // Normalize input vectors
     let n = normal.normalized();
-    let l = light_dir.normalized();
     let v = view_dir.normalized();
+    let mut r_acc = ambient_light.r * material.ambient.r;
+    let mut g_acc = ambient_light.g * material.ambient.g;
+    let mut b_acc = ambient_light.b * material.ambient.b;
+    for ls in lights {
+        if let LightSource::PointLight(pl) = ls {
+            let to_light = pl.position - point;
+            let dist2 = to_light.dot(&to_light).max(1e-6); // avoid divide-by-zero
+            let dist = dist2.sqrt();
+            let light_dir = to_light / dist; // normalized
+            let ndotl = n.dot(&light_dir).max(0.0);
+            if ndotl <= 0.0 { continue; }
+            // Diffuse component (per channel)
+            let diff_r = material.diffuse.r * ndotl;
+            let diff_g = material.diffuse.g * ndotl;
+            let diff_b = material.diffuse.b * ndotl;
 
-    // Ambient component
-    let ambient = ambient_light * material_ambient;
+            // Specular component
+            let reflect = (n * (2.0 * n.dot(&light_dir)) - light_dir).normalized();
+            let spec_angle = reflect.dot(&v).max(0.0);
+            let spec_factor = spec_angle.powf(material.shininess.max(0.0));
+            let spec_r = material.specular.r * spec_factor;
+            let spec_g = material.specular.g * spec_factor;
+            let spec_b = material.specular.b * spec_factor;
 
-    // Diffuse component
-    let ndotl = n.dot(&l).max(0.0);
-    let diffuse = material_diffuse * ndotl;
+            // Gentler attenuation: 1 / (1 + L*d + Q*d^2)
+            let attenuation = 1.0 / (1.0 + ATTEN_LINEAR * dist + ATTEN_QUAD * dist2);
 
-    let specular = if ndotl > 0.0 {
-        let r = (n * (2.0 * n.dot(&l)) - l).normalized();
-        let s = r.dot(&v).max(0.0).powf(shininess.max(0.0));
-        material_specular * s
-    } else {
-        Color::new(0.0, 0.0, 0.0, 0.0)
-    };
+            let intensity = pl.intensity; // user-controlled brightness scalar
 
-    // Final color
-    let color = ambient + (diffuse + specular) * light_color;
-    color
+            r_acc += (diff_r + spec_r) * pl.color.r * attenuation * intensity;
+            g_acc += (diff_g + spec_g) * pl.color.g * attenuation * intensity;
+            b_acc += (diff_b + spec_b) * pl.color.b * attenuation * intensity;
+        }
+    }
+
+    // Clamp final accumulated color to [0,1]
+    Color::new(r_acc.clamp(0.0, 1.0), g_acc.clamp(0.0, 1.0), b_acc.clamp(0.0, 1.0), 1.0)
 }

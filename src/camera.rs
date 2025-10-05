@@ -1,9 +1,9 @@
 use crate::color::Color;
-use crate::light::PointLight;
-use crate::phong;
-use crate::sphere::Sphere;
+use crate::light::{LightSource};
+use crate::phong::{shade_multi_light};
 use crate::vec3::Vec3;
 use crate::ray::Ray;
+use crate::object::Object;
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Camera {
@@ -24,68 +24,60 @@ impl Camera {
     pub fn set_resolution(&mut self, resolution: (u32, u32)) {
         self.resolution = resolution;
     }
+    
 
-    pub fn render_sphere(&self, sphere: &Sphere, light: &PointLight) -> Vec<u8> {
-        let width = self.resolution.0;
-        let height = self.resolution.1;
+    pub fn render_scene(&self, objects: &[Object], lights: &[LightSource]) -> Vec<u8> {
+        let (width, height) = self.resolution;
         let aspect_ratio: f32 = if height > 0 { width as f32 / height as f32 } else { 1.0 };
         let mut buffer = vec![0u8; (width * height * 4) as usize];
-
-        // Convert FOV (stored in degrees) to radians for tangent
         let fov_rad = self.fov.to_radians();
 
-        for y in 0..height {
-            for x in 0..width {
-                // pixel center
-                let px = x as f32 + 0.5;
-                let py = y as f32 + 0.5;
+        let ambient_light = Color::new(0.1,0.1,0.1,1.0);
 
-                let sx = (2.0 * px / width as f32) - 1.0;      // -1 .. 1
-                let sy = 1.0 - (2.0 * py / height as f32);     //  1 .. -1 (flip y -> top positive)
+        for y in 0..height { for x in 0..width {
+            let px = x as f32 + 0.5;
+            let py = y as f32 + 0.5;
 
-                let half_h = (0.5 * fov_rad).tan();
-                let half_w = aspect_ratio * half_h;
+            let sx = (2.0 * px / width as f32) - 1.0;
+            let sy = 1.0 - (2.0 * py / height as f32);
 
-                let cx = sx * half_w;
-                let cy = sy * half_h;
-                let cz = 1.0f32; // forward (+Z)
+            let half_h = (0.5 * fov_rad).tan();
+            let half_w = aspect_ratio * half_h;
 
-                let ray_origin = self.position; // camera origin
-                let ray_direction = Vec3::new(cx, cy, cz).normalized(); // normalize for stable shading
-                let ray = Ray::new(ray_origin, ray_direction);
+            let cx = sx * half_w;
+            let cy = sy * half_h;
+            let cz = 1.0;
 
-                let hit = sphere.intersects(&ray);
-                let idx = ((y * width + x) * 4) as usize;
-                if let Some((_t, intersect, normal)) = hit {
-                    // Light direction: point -> light
-                    let light_direction = (light.position - intersect).normalized();
-                    // View direction: point -> camera
-                    let view_direction = (self.position - intersect).normalized();
+            let ray = Ray::new(self.position, Vec3::new(cx, cy, cz).normalized());
 
-                    let color = phong::phong_shade(
-                        normal,
-                        light_direction,
-                        view_direction,
-                        light.color,
-                        Color::new(0.0,0.0,1.0,1.0),   // ambient material
-                        Color::new(0.0,0.0,1.0,1.0),   // diffuse material
-                        Color::new(1.0,1.0,1.0,1.0),   // specular material
-                        32.0,                           // shininess (increased for tighter highlight)
-                        Color::new(0.1,0.1,0.1,1.0),   // ambient light
-                    );
+            let mut closest_t = f32::INFINITY;
+            let mut hit: Option<(usize, Vec3, Vec3)> = None; // (object index, point, normal)
 
-                    buffer[idx] = (color.r * 255.0) as u8;      // R
-                    buffer[idx + 1] = (color.g * 255.0) as u8;  // G
-                    buffer[idx + 2] = (color.b * 255.0) as u8;  // B
-                    buffer[idx + 3] = 255;                      // A
-                } else {
-                    buffer[idx] = 0;
-                    buffer[idx + 1] = 0;
-                    buffer[idx + 2] = 0;
-                    buffer[idx + 3] = 255;
+            for (i, obj) in objects.iter().enumerate() {
+                if let Some((t,p,n)) = obj.intersects(&ray) {
+                    if t < closest_t {
+                        closest_t = t;
+                        hit = Some((i,p,n));
+                    }
                 }
             }
-        }
+
+            let idx = ((y * width + x) * 4) as usize;
+            if let Some((obj_idx, p, n)) = hit {
+                let view_dir = (self.position - p).normalized();
+                let material = objects[obj_idx].material();
+                let color = shade_multi_light(n, view_dir, p, lights, material, ambient_light);
+                buffer[idx] = (color.r * 255.0) as u8;
+                buffer[idx + 1] = (color.g * 255.0) as u8;
+                buffer[idx + 2] = (color.b * 255.0) as u8;
+                buffer[idx + 3] = 255;
+            } else {
+                buffer[idx] = 0;
+                buffer[idx+1] = 0;
+                buffer[idx+2] = 0;
+                buffer[idx+3] = 255;
+            }
+        }}
         buffer
     }
 
