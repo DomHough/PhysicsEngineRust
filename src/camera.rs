@@ -1,8 +1,6 @@
 use crate::color::Color;
-use crate::light::{LightSource, PointLight};
-use crate::phong::{self, shade_multi_light};
-use crate::material::Material; // updated import
-use crate::sphere::Sphere;
+use crate::light::{LightSource};
+use crate::phong::{shade_multi_light};
 use crate::vec3::Vec3;
 use crate::ray::Ray;
 use crate::object::Object;
