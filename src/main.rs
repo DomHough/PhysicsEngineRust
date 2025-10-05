@@ -5,6 +5,9 @@ mod ray;
 mod phong;
 mod light;
 mod color;
+mod infinite_plane;
+mod object;
+mod material; // added material module
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::application::ApplicationHandler;
@@ -15,8 +18,12 @@ use sphere::Sphere;
 use vec3::Vec3;
 use crate::camera::Camera;
 use crate::color::Color;
-use crate::light::PointLight;
-use image; // for saving the buffer
+use crate::light::{LightSource, PointLight};
+use crate::object::Object; // enum for scene objects
+use image;
+use crate::infinite_plane::InfinitePlane;
+use crate::material::Material;
+// for saving the buffer
 
 #[derive(Default)]
 struct App {
@@ -42,17 +49,60 @@ impl ApplicationHandler for App {
         let px = Pixels::new(w, h, st).expect("create pixels");
         self.pixels = Some(px);
 
-        // Build scene and render once to a buffer
-        let sphere = Sphere::new(2.0, Vec3::new(0.0, 0.0, 5.0));
-        let light = PointLight::new(Vec3::new(5.0, 5.0, 0.0), Color::new(1.0, 1.0, 1.0, 0.1));
+        // Build scene objects
+        let objects = vec![
+            Object::Sphere(
+                Sphere::new(
+                    2.0,
+                    Vec3::new(0.0, 0.0, 5.0),
+                    Material::new(
+                        Color::new(0.0, 0.0, 1.0, 1.0),
+                        Color::new(0.0, 0.0, 1.0, 1.0),
+                        Color::new(1.0, 1.0, 1.0, 1.0),
+                32.0
+                    )
+                )
+            ),
+            Object::InfinitePlane(
+                InfinitePlane::new(
+                    Vec3::new(0.0, -2.0, 0.0),
+                    Vec3::new(0.0, 1.0, 0.0),
+                    Material::new(
+                        Color::new(0.0, 0.0, 1.0, 1.0),
+                        Color::new(0.0, 0.0, 1.0, 1.0),
+                        Color::new(1.0, 1.0, 1.0, 1.0),
+                        32.0)
+                )
+            )
+        ];
+        let lights = vec![
+            LightSource::PointLight(
+                PointLight::new(
+                    Vec3::new(5.0, 5.0, 0.0),
+                    Color::new(1.0, 1.0, 1.0, 0.1),
+                    1.0
+                )
+            ),
+            LightSource::PointLight(
+                PointLight::new(
+                    Vec3::new(-5.0, 5.0, 0.0),
+                    Color::new(1.0, 1.0, 1.0, 0.1),
+                    1.0
+                )
+            )
+        ];
+
         let camera = Camera::new(
             Vec3::new(0.0, 0.0, 0.0),
             Vec3::new(0.0, 0.0, 0.0),
             60.0_f32,
             (w, h)
         );
-        self.image = Some(camera.render_sphere(&sphere, &light));
+
+        // Render full scene (multiple objects)
+        self.image = Some(camera.render_scene(&objects, &lights));
         self.dims = (w, h);
+
         // Save the image to disk
         if let Some(buf) = &self.image {
             let _ = image::save_buffer(
