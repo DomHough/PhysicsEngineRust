@@ -54,23 +54,23 @@ impl ApplicationHandler for App {
             Object::Sphere(
                 Sphere::new(
                     2.0,
-                    Vec3::new(0.0, 0.0, 5.0),
+                    Vec3::new(0.0, 0.0, 5.0), // position
                     Material::new(
-                        Color::new(0.0, 0.0, 1.0, 1.0),
-                        Color::new(0.0, 0.0, 1.0, 1.0),
-                        Color::new(1.0, 1.0, 1.0, 1.0),
+                        Color::new(0.0, 0.0, 1.0, 1.0), // ambient
+                        Color::new(0.0, 0.0, 1.0, 1.0), // diffuse
+                        Color::new(1.0, 1.0, 1.0, 1.0), // specular
                 32.0
                     )
                 )
             ),
             Object::InfinitePlane(
                 InfinitePlane::new(
-                    Vec3::new(0.0, -2.0, 0.0),
-                    Vec3::new(0.0, 1.0, 0.0),
+                    Vec3::new(0.0, -2.0, 0.0), // position
+                    Vec3::new(0.0, 1.0, 0.0), // normal
                     Material::new(
-                        Color::new(0.0, 0.0, 1.0, 1.0),
-                        Color::new(0.0, 0.0, 1.0, 1.0),
-                        Color::new(1.0, 1.0, 1.0, 1.0),
+                        Color::new(0.5, 0.5, 0.0, 1.0), // ambient
+                        Color::new(0.5, 0.5, 0.0, 1.0), // diffuse
+                        Color::new(1.0, 1.0, 1.0, 1.0), // specular
                         32.0)
                 )
             )
@@ -78,15 +78,15 @@ impl ApplicationHandler for App {
         let lights = vec![
             LightSource::PointLight(
                 PointLight::new(
-                    Vec3::new(5.0, 5.0, 0.0),
-                    Color::new(1.0, 1.0, 1.0, 0.1),
+                    Vec3::new(5.0, 5.0, 0.0), // position
+                    Color::new(1.0, 1.0, 1.0, 0.1), // color
                     1.0
                 )
             ),
             LightSource::PointLight(
                 PointLight::new(
-                    Vec3::new(-5.0, 5.0, 0.0),
-                    Color::new(1.0, 1.0, 1.0, 0.1),
+                    Vec3::new(-5.0, 5.0, 0.0), // position
+                    Color::new(1.0, 1.0, 1.0, 0.1), // color
                     1.0
                 )
             )
