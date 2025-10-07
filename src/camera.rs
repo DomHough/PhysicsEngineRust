@@ -1,9 +1,8 @@
-use crate::color::Color;
-use crate::light::{LightSource};
+use crate::light::{AmbientLight, Light};
 use crate::phong::{shade_multi_light};
 use crate::vec3::Vec3;
-use crate::ray::Ray;
-use crate::object::Object;
+use crate::ray::{Ray, Segment};
+use crate::hittable::{Hittable};
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Camera {
@@ -26,58 +25,76 @@ impl Camera {
     }
     
 
-    pub fn render_scene(&self, objects: &[Object], lights: &[LightSource]) -> Vec<u8> {
+    pub fn render_scene(&self, objects: &[Box<dyn Hittable>], lights: &[Box<dyn Light>], ambient_light: &AmbientLight) -> Vec<u8> {
         let (width, height) = self.resolution;
         let aspect_ratio: f32 = if height > 0 { width as f32 / height as f32 } else { 1.0 };
         let mut buffer = vec![0u8; (width * height * 4) as usize];
         let fov_rad = self.fov.to_radians();
 
-        let ambient_light = Color::new(0.1,0.1,0.1,1.0);
 
-        for y in 0..height { for x in 0..width {
-            let px = x as f32 + 0.5;
-            let py = y as f32 + 0.5;
+        for y in 0..height {
+            for x in 0..width {
+                let px = x as f32 + 0.5;
+                let py = y as f32 + 0.5;
 
-            let sx = (2.0 * px / width as f32) - 1.0;
-            let sy = 1.0 - (2.0 * py / height as f32);
+                let sx = (2.0 * px / width as f32) - 1.0;
+                let sy = 1.0 - (2.0 * py / height as f32);
 
-            let half_h = (0.5 * fov_rad).tan();
-            let half_w = aspect_ratio * half_h;
+                let half_h = (0.5 * fov_rad).tan();
+                let half_w = aspect_ratio * half_h;
 
-            let cx = sx * half_w;
-            let cy = sy * half_h;
-            let cz = 1.0;
+                let cx = sx * half_w;
+                let cy = sy * half_h;
+                let cz = 1.0;
 
-            let ray = Ray::new(self.position, Vec3::new(cx, cy, cz).normalized());
+                let ray = Ray::new(self.position, Vec3::new(cx, cy, cz).normalized());
 
-            let mut closest_t = f32::INFINITY;
-            let mut hit: Option<(usize, Vec3, Vec3)> = None; // (object index, point, normal)
+                let mut closest_t = f32::INFINITY;
+                let mut hit: Option<(usize, Vec3, Vec3)> = None; // (object index, point, normal)
 
-            for (i, obj) in objects.iter().enumerate() {
-                if let Some((t,p,n)) = obj.intersects(&ray) {
-                    if t < closest_t {
-                        closest_t = t;
-                        hit = Some((i,p,n));
+                for (i, obj) in objects.iter().enumerate() {
+                    if let Some((t, p, n)) = obj.intersects_ray(&ray) {
+                        if t < closest_t {
+                            closest_t = t;
+                            hit = Some((i, p, n));
+                        }
                     }
                 }
-            }
 
-            let idx = ((y * width + x) * 4) as usize;
-            if let Some((obj_idx, p, n)) = hit {
-                let view_dir = (self.position - p).normalized();
-                let material = objects[obj_idx].material();
-                let color = shade_multi_light(n, view_dir, p, lights, material, ambient_light);
-                buffer[idx] = (color.r * 255.0) as u8;
-                buffer[idx + 1] = (color.g * 255.0) as u8;
-                buffer[idx + 2] = (color.b * 255.0) as u8;
-                buffer[idx + 3] = 255;
-            } else {
-                buffer[idx] = 0;
-                buffer[idx+1] = 0;
-                buffer[idx+2] = 0;
-                buffer[idx+3] = 255;
+                let idx = ((y * width + x) * 4) as usize;
+                if let Some((obj_idx, p, n)) = hit {
+                    // get all lights that aren't blocked
+                    let mut valid_lights: Vec<&dyn Light> = Vec::new();
+                    for l in lights {
+                        let light_segment = Segment::new(p, *l.position());
+                        let mut blocked = false;
+                        for obj in objects {
+                            if let Some((_t, _p, _n)) = obj.intersects_segment(&light_segment) {
+                                // light is blocked
+                                blocked = true;
+                                break;
+                            }
+                        }
+                        if !blocked {
+                            valid_lights.push(l.as_ref());
+                        }
+                    }
+
+                    let view_dir = (self.position - p).normalized();
+                    let material = objects[obj_idx].material();
+                    let color = shade_multi_light(n, view_dir, p, &valid_lights, material, ambient_light);
+                    buffer[idx] = (color.r * 255.0) as u8;
+                    buffer[idx + 1] = (color.g * 255.0) as u8;
+                    buffer[idx + 2] = (color.b * 255.0) as u8;
+                    buffer[idx + 3] = 255;
+                } else {
+                    buffer[idx] = 0;
+                    buffer[idx + 1] = 0;
+                    buffer[idx + 2] = 0;
+                    buffer[idx + 3] = 255;
+                }
             }
-        }}
+        }
         buffer
     }
 
