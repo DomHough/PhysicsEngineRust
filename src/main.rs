@@ -6,8 +6,10 @@ mod phong;
 mod light;
 mod color;
 mod infinite_plane;
-mod object;
-mod material; // added material module
+mod hittable;
+mod material;
+mod consts;
+// added material module
 
 use pixels::{Pixels, SurfaceTexture};
 use winit::application::ApplicationHandler;
@@ -18,8 +20,8 @@ use sphere::Sphere;
 use vec3::Vec3;
 use crate::camera::Camera;
 use crate::color::Color;
-use crate::light::{LightSource, PointLight};
-use crate::object::Object; // enum for scene objects
+use crate::light::{AmbientLight, PointLight, Light};
+use crate::hittable::{Hittable}; // enum for scene objects
 use image;
 use crate::infinite_plane::InfinitePlane;
 use crate::material::Material;
@@ -36,7 +38,7 @@ struct App {
 impl ApplicationHandler for App {
     fn resumed(&mut self, el: &ActiveEventLoop) {
         // Desired resolution
-        let (w, h) = (500u32, 500u32);
+        let (w, h) = (1000u32, 1000u32);
 
         // Create + leak the window (simplify lifetime) sized to camera resolution
         let winit_window = el.create_window(
@@ -50,11 +52,11 @@ impl ApplicationHandler for App {
         self.pixels = Some(px);
 
         // Build scene objects
-        let objects = vec![
-            Object::Sphere(
+        let objects: Vec<Box<dyn Hittable>> = vec![
+            Box::new(
                 Sphere::new(
                     2.0,
-                    Vec3::new(0.0, 0.0, 5.0), // position
+                    Vec3::new(0.0, 0.0, 10.0), // position
                     Material::new(
                         Color::new(0.0, 0.0, 1.0, 1.0), // ambient
                         Color::new(0.0, 0.0, 1.0, 1.0), // diffuse
@@ -63,7 +65,7 @@ impl ApplicationHandler for App {
                     )
                 )
             ),
-            Object::InfinitePlane(
+            Box::new(
                 InfinitePlane::new(
                     Vec3::new(0.0, -2.0, 0.0), // position
                     Vec3::new(0.0, 1.0, 0.0), // normal
@@ -75,22 +77,24 @@ impl ApplicationHandler for App {
                 )
             )
         ];
-        let lights = vec![
-            LightSource::PointLight(
+        let lights: Vec<Box<dyn Light>> = vec![
+            Box::new(
                 PointLight::new(
                     Vec3::new(5.0, 5.0, 0.0), // position
-                    Color::new(1.0, 1.0, 1.0, 0.1), // color
+                    Color::new(1.0, 1.0, 1.0, 1.0), // color
                     1.0
                 )
             ),
-            LightSource::PointLight(
-                PointLight::new(
-                    Vec3::new(-5.0, 5.0, 0.0), // position
-                    Color::new(1.0, 1.0, 1.0, 0.1), // color
-                    1.0
-                )
-            )
+            // Box::new(
+            //     PointLight::new(
+            //         Vec3::new(-5.0, 5.0, 0.0), // position
+            //         Color::new(1.0, 1.0, 1.0, 0.1), // color
+            //         1.0
+            //     )
+            // )
         ];
+
+        let ambient_light = AmbientLight::new(Color::new(1.0, 1.0, 1.0, 1.0), 0.1);
 
         let camera = Camera::new(
             Vec3::new(0.0, 0.0, 0.0),
@@ -100,7 +104,7 @@ impl ApplicationHandler for App {
         );
 
         // Render full scene (multiple objects)
-        self.image = Some(camera.render_scene(&objects, &lights));
+        self.image = Some(camera.render_scene(&objects, &lights, &ambient_light));
         self.dims = (w, h);
 
         // Save the image to disk
