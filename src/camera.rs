@@ -1,5 +1,4 @@
-use crate::color::Color;
-use crate::light::{AmbientLight, Light, PointLight};
+use crate::light::{AmbientLight, Light};
 use crate::phong::{shade_multi_light};
 use crate::vec3::Vec3;
 use crate::ray::{Ray, Segment};

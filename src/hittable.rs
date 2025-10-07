@@ -1,7 +1,5 @@
-use crate::infinite_plane::InfinitePlane;
 use crate::material::Material;
 use crate::ray::{Ray, Segment};
-use crate::sphere::Sphere;
 use crate::vec3::Vec3;
 
 pub(crate) trait Hittable {
