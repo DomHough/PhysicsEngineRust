@@ -10,3 +10,14 @@ impl Ray {
         Ray { origin, direction }
     }
 }
+
+pub(crate) struct Segment {
+    pub(crate) start: Vec3,
+    pub(crate) end: Vec3
+}
+
+impl Segment {
+    pub fn new(start: Vec3, end: Vec3) -> Self {
+        Segment { start, end }
+    }
+}
