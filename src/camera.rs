@@ -1,8 +1,8 @@
 use crate::light::{AmbientLight, Light};
+use crate::objects::hittable::Hittable;
 use crate::phong::{shade_multi_light};
 use crate::vec3::Vec3;
 use crate::ray::{Ray, Segment};
-use crate::hittable::{Hittable};
 
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Camera {
