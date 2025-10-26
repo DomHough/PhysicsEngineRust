@@ -1,8 +1,9 @@
+// filepath: src/objects/infinite_plane.rs
 use crate::consts::EPS;
 use crate::ray::Ray;
 use crate::vec3::Vec3;
-use crate::material::Material; // new import
-use crate::hittable::{Hittable};
+use crate::material::Material;
+use crate::objects::hittable::Hittable;
 
 #[derive(Debug)]
 pub(crate) struct InfinitePlane {
@@ -41,3 +42,4 @@ impl Hittable for InfinitePlane {
     }
     fn material(&self) -> &Material { &self.material }
 }
+

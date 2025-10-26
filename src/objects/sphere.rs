@@ -1,9 +1,10 @@
+// filepath: src/objects/sphere.rs
+
 use crate::consts::EPS;
 use crate::ray::{Ray, Segment};
 use crate::vec3::Vec3;
 use crate::material::Material;
-use crate::hittable::{Hittable};
-// new import
+use crate::objects::hittable::Hittable;
 
 #[derive(Debug)]
 pub(crate) struct Sphere {
@@ -55,3 +56,4 @@ impl Hittable for Sphere {
 
     fn material(&self) -> &Material { &self.material }
 }
+

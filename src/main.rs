@@ -1,12 +1,10 @@
 mod vec3;
-mod sphere;
+mod objects;
 mod camera;
 mod ray;
 mod phong;
 mod light;
 mod color;
-mod infinite_plane;
-mod hittable;
 mod material;
 mod consts;
 // added material module
@@ -16,15 +14,15 @@ use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId, WindowAttributes};
-use sphere::Sphere;
 use vec3::Vec3;
 use crate::camera::Camera;
 use crate::color::Color;
 use crate::light::{AmbientLight, PointLight, Light};
-use crate::hittable::{Hittable}; // enum for scene objects
 use image;
-use crate::infinite_plane::InfinitePlane;
 use crate::material::Material;
+use crate::objects::hittable::Hittable;
+use crate::objects::infinite_plane::InfinitePlane;
+use crate::objects::sphere::Sphere;
 // for saving the buffer
 
 #[derive(Default)]
